@@ -1,0 +1,51 @@
+from .common import Mission, Step, World, active, fresh, mode, pane_has_line
+
+WORLD = World(0, "Hello, Multiplexer", card="welcome", missions=[
+    Mission("0.1", "Just a terminal", xp=30, par=40, steps=[
+        Step("A pane is just a terminal. Type  **echo hello**  and press Enter.",
+             setup=fresh,
+             goal=lambda c: pane_has_line(c, active(c).id, "hello"),
+             hints=["Type the words echo hello, then press the Enter key.",
+                    "Letters: e c h o, space, h e l l o, then Enter."],
+             done="See? Normal shell. tmux just wraps it."),
+    ]),
+    Mission("0.2", "Meet the prefix", xp=50, par=40, card="prefix", steps=[
+        Step("Press the prefix `C-b`: hold Ctrl, tap b, let go. Watch for the yellow PREFIX badge.",
+             goal=lambda c: (c.s.client and c.s.client.prefix) or c.did("prefix", "view-mode"),
+             hints=["Hold down the Ctrl key, press b once, then let go of both keys.",
+                    "Ctrl+b together, then release. Nothing visible happens except the PREFIX badge."],
+             keys=["prefix"], done="That's the prefix! tmux is now listening for a command key."),
+        Step("Now press `?` (Shift + /) to list every key: that's `C-b ?`",
+             goal=lambda c: mode(c) == "view-mode",
+             hints=["If the PREFIX badge is gone, press `C-b` again first, then ?",
+                    "Ctrl+b, let go, then Shift+/ (the question mark)."],
+             expect=["view-mode"], keys=["list-keys"], demo=[["list-keys"]],
+             done="Every binding tmux has. You'll learn the important ones."),
+        Step("Scroll with ↑ ↓ or PgUp/PgDn if you like, then press `q` to leave the list.",
+             goal=lambda c: mode(c) != "view-mode",
+             hints=["Just press the q key.", "q = quit this view."],
+             done="`C-b ?` is your panic button: forgot a key? Look it up!"),
+    ]),
+    Mission("0.3", "Never mind", xp=40, par=30, steps=[
+        Step("Press the prefix `C-b` again.",
+             goal=lambda c: bool(c.s.client and c.s.client.prefix),
+             hints=["Ctrl+b, then let go."]),
+        Step("Changed your mind? Press `Escape` to cancel the prefix. Nothing will happen.",
+             goal=lambda c: bool(c.s.client and not c.s.client.prefix and not mode(c)
+                                 and len(c.s.window.panes) == len(c.base.window.panes)),
+             mistakes=[(lambda c: bool(mode(c)), "Oops, that key did something. Press q to leave, then retry.")],
+             hints=["Press the Esc key (top left of the keyboard)."],
+             done="Unbound keys after the prefix are ignored: safe to escape."),
+    ]),
+    Mission("0.4", "Tick tock", xp=40, par=30, steps=[
+        Step("Every command is prefix + key. Show a giant clock: `C-b t`",
+             setup=fresh,
+             goal=lambda c: mode(c) == "clock-mode",
+             hints=["Prefix first (Ctrl+b, let go), then a lowercase t.", "`C-b` then t"],
+             expect=["clock-mode"], keys=["clock"], demo=[["clock-mode"]]),
+        Step("Handy for impressing coworkers. Press any key (like `q`) to put it away.",
+             goal=lambda c: mode(c) != "clock-mode",
+             hints=["Any key closes the clock."],
+             done="That's the whole rhythm of tmux: prefix, key."),
+    ]),
+])
